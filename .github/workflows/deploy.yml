@@ -33,18 +33,16 @@ jobs:
       - name: Build all decks
         run: |
           mkdir -p dist
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
           for dir in */; do
-            # slides.md があるディレクトリのみ処理
             if [ -f "${dir}slides.md" ]; then
               deck="${dir%/}"
               echo "Building: $deck"
 
-              # GitHub Pages 用 HTML（/deck名/ のパスに配置）
               npx slidev build "${deck}/slides.md" \
                 --out "../dist/${deck}" \
-                --base "/${deck}/"
+                --base "/${REPO_NAME}/${deck}/"
 
-              # PDF 生成
               npx slidev export "${deck}/slides.md" \
                 --output "dist/${deck}.pdf"
             fi
@@ -52,16 +50,21 @@ jobs:
 
       - name: Generate index page
         run: |
-          cat <<'EOF' > dist/index.html
+          links=""
+          for dir in */; do
+            if [ -f "${dir}slides.md" ]; then
+              deck="${dir%/}"
+              links="${links}<li><a href=\"./${deck}/\">${deck}</a> / <a href=\"./${deck}.pdf\">PDF</a></li>"
+            fi
+          done
+
+          cat <<EOF > dist/index.html
           <!DOCTYPE html>
           <html lang="ja">
           <head><meta charset="UTF-8"><title>Slide Decks</title></head>
           <body>
             <h1>Slide Decks</h1>
-            <ul id="list"></ul>
-            <script>
-              // デッキ一覧を自動生成（実運用ではJekyllやスクリプトで生成推奨）
-            </script>
+            <ul>${links}</ul>
           </body>
           </html>
           EOF
